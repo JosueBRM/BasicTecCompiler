@@ -51,6 +51,7 @@ public class SintacticoSemantico {
     //--------------------------------------------------------------------------
     // Funciones  D -> R
     
+    
     public String getDomain(String t) {
         String[] partes = t.split("->");
         return partes[0];

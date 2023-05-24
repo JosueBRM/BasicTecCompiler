@@ -11,4 +11,12 @@ package compilador;
 public class Atributo {
     String tipo = "";
     String h    = "";
+    
+    //C3D
+    public String valor = "";
+    public String Lugar = "";
+    public String comienzo = "";
+    public String siguiente = "";
+    public String verdadera = "";
+    public String falsa = "";
 }

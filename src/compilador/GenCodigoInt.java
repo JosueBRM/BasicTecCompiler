@@ -31,20 +31,20 @@
 package compilador;
 
 import general.Linea_BE;
+import java.util.Stack;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 public class GenCodigoInt {
      //--------------------------------------------------------------------------
     private Compilador cmp;
-    private boolean    analizarSemantica = false;
     private String     preAnalisis;
-    private static final String VACIO = "VACIO";
-    private static final String ERROR_TIPO = "ERROR_TIPO";
     
     //Codigo Intermedio Variables ----------------------------------------------
     public static final int NIL = 0;
-    private int consecutivoTemp;
-    private String prefix1;
+    private int consecutivoTemp = 1;
+    private int consecutivoEtiq = 1;
     //--------------------------------------------------------------------------
     // Constructor de la clase, recibe la referencia de la clase principal del 
     // compilador.
@@ -55,8 +55,122 @@ public class GenCodigoInt {
     // Fin del Constructor
     public void generar () {
         consecutivoTemp = 1;
+        preAnalisis = cmp.be.preAnalisis.complex;
+        
+        programa();
 
     }   
+    
+    //--------------------------------------------------------------------------
+    
+    private void emite ( String c3d ) {
+        cmp.iuListener.mostrarCodInt( c3d );
+    }
+    
+    //--------------------------------------------------------------------------
+
+    private String tempnuevo (){
+        return  "t" + consecutivoTemp++;
+    }
+    
+    //--------------------------------------------------------------------------
+    
+    private String etiqnueva (){
+        return  "etiq" + consecutivoEtiq++;
+    }
+    
+    //--------------------------------------------------------------------------
+    
+    public static int precedence(String operador) {
+        switch (operador) {
+            case "+":
+            case "-":
+                return 1;
+            case "*":
+            case "/":
+                return 2;
+            default:
+                return 0;
+        }
+    }
+    
+    public static String infixToPrefix(String infix){
+        String inverted = new StringBuilder(infix).reverse().toString();
+        String [] inverted2 = inverted.split("(\\s)");
+        for (String string : inverted2) {
+            System.out.println(string);
+        }
+        
+        // Create a stack to store operators
+        Stack<String> operators = new Stack<>();
+        
+        // Create a StringBuilder to store the prefix expression
+        StringBuilder prefix = new StringBuilder();
+
+        for(String s : inverted2){
+                
+                if (s.equals(" ")) {
+                    continue; // Ignore spaces
+                }
+                if (isLetterOrDigit(s)) {
+                    prefix.append(s).append(" "); // Append operand and space
+                } else if (")".equals(s)) {
+                    operators.push(s);
+                } else if ("(".equals(s)) {
+                    while (!operators.isEmpty() && 
+                            !operators.peek().equals(")")) {
+                        prefix.append(operators.pop()).append(" "); // Append operator and space
+                    }
+                    operators.pop(); // Pop the closing bracket
+                } else {
+                    while (!operators.isEmpty() 
+                            && precedence(operators.peek()) > 
+                                precedence(s)) {
+                        prefix.append(operators.pop()).append(" "); // Append operator and space
+                    }
+                    operators.push(s);
+                }
+        }
+
+        while (!operators.isEmpty()) {
+            prefix.append(operators.pop()).append(" "); // Append operator and space
+        }
+
+        // Reverse the prefix expression and return
+        return prefix.reverse().toString().trim();
+
+    }
+    
+    public static boolean isLetterOrDigit(String s){
+        Pattern pattern = Pattern.compile("([aA-zZ0-9])\\w*");
+        Matcher matcher = pattern.matcher(s);
+        
+        return matcher.find();
+    }
+    
+    public String prefixTo3D(String prefix){
+        
+        emite(prefix);
+        String[] c3d = prefix.split("\\s+");
+         for(int i=0; c3d[i].equals(("t"+consecutivoTemp)) || i < c3d.length-1  ;i++)
+         {
+             if(c3d[i].matches("([\\+\\-\\*\\/])\\w*") && c3d[i+1]
+                            .matches("([A-Za-z1-9])\\w*")&& c3d[i+2]
+                                .matches("([A-Za-z1-9])\\w*") )
+             {
+                 //emite(tempnuevo() + " := " + op2 + op1 +  op3);
+                 emite(tempnuevo() + " := " + c3d[i+1] + c3d[i] +  c3d[i+2]);
+                  c3d[i]="t"+(consecutivoTemp-1);            
+                 for (int j = i+1; j < c3d.length-2; j++) {
+                    
+                         c3d[j]=c3d[j+2];              
+                     }
+                  i=0;
+            }
+         }
+         emite(tempnuevo() + " := " + c3d[1] + c3d[0] +  c3d[2]);         
+         return "t" + consecutivoTemp + "";
+     }
         
     // Funciones  D -> R
     
@@ -75,19 +189,6 @@ public class GenCodigoInt {
     // Metodo que inicia la ejecucion del analisis sintactico predictivo.
     // analizarSemantica : true = realiza el analisis semantico a la par del sintactico
     //                     false= realiza solo el analisis sintactico sin comprobacion semantica
-
-    public void analizar(boolean analizarSemantica) {
-        consecutivoTemp = 1;
-        this.analizarSemantica = analizarSemantica;
-        preAnalisis = cmp.be.preAnalisis.complex;
-
-        // * * *   INVOCAR AQUI EL PROCEDURE DEL SIMBOLO INICIAL   * * *
-        
-        Atributo atributos = new Atributo ();
-        programa ( atributos );
-        
-    }
-
     //--------------------------------------------------------------------------
 
     private void emparejar(String t) {
@@ -158,7 +259,7 @@ public class GenCodigoInt {
            return false;
     }
     
-    private void programa ( Atributo prog ) {
+    private void programa() {
         
         Atributo declaraciones = new Atributo();
         Atributo declaraciones_subprogramas = new Atributo();
@@ -194,7 +295,9 @@ public class GenCodigoInt {
             declaraciones ( declaraciones_2 );
             
         } 
-        else {}
+        else {
+            // declaraciones -> empty 
+        }
     }
 //------------------------------------------------------------------------------
     
@@ -233,13 +336,8 @@ public class GenCodigoInt {
             
             emparejar ( "," );
             listaDeclaraciones ( listaDeclaraciones );
-            
-// -----------------------------------{ 5 }-------------------------------------
-        } else {
-// -----------------------------------{ 6 }-------------------------------------
-            if ( analizarSemantica ) {
-                listaDeclaracionesPrima.tipo = VACIO;
-            }
+        }else{
+            //lista_declaraciones_prima -> empty 
         }
     }  
 //------------------------------------------------------------------------------
@@ -247,21 +345,12 @@ public class GenCodigoInt {
         if ( "integer".equals(preAnalisis) ) {
             emparejar ( "integer" );
            
-// -----------------------------------{ 7 }-------------------------------------
-            if ( analizarSemantica ) 
-                tipo.tipo = "INTEGER";
             
         } else if ( "single".equals(preAnalisis) ) {
             emparejar ( "single" );
-// -----------------------------------{ 8 }-------------------------------------
-            if ( analizarSemantica ) 
-                tipo.tipo = "SINGLE";
             
         } else if ( "string".equals(preAnalisis) ) {
             emparejar ( "string" );
-// -----------------------------------{ 9 }-------------------------------------
-            if ( analizarSemantica ) 
-                tipo.tipo = "STRING";
 
         } else {
             error ( "[tipo]: Tipo de dato erroneo." +
@@ -280,50 +369,26 @@ public class GenCodigoInt {
             declaracionSubprograma ( declaracion_subprograma );
             declaracionesSubprogramas ( declaraciones_subprogramas_1 );
             
-// ----------------------------------{ 10 }-------------------------------------
-            if ( analizarSemantica ) {
-                if ( declaracion_subprograma.tipo.equals ( VACIO ) &&
-                     declaraciones_subprogramas_1.tipo.equals ( VACIO ) ) {
-                    declaracionesSubprogramas.tipo = VACIO;
-                } else {
-                    declaracionesSubprogramas.tipo = ERROR_TIPO;
-                    cmp.me.error( cmp.ERR_SEMANTICO,
-                            "{10} : declaracion_subprogrma = ERROR_TIPO"
-                             + "declaraciones_subprogramas1 = ERROR_TIPO" );
-                }
-            }
-        } else {
-            // empty {11}
-            
-// ----------------------------------{ 11 }-------------------------------------
-            if ( analizarSemantica ) {
-                declaracionesSubprogramas.tipo = VACIO;
-            }
-            // -----------------------------------------------------------------
+        }else{
+            // declaraciones_subprogramas -> empty 
         }
     }
     
     //--------------------------------------------------------------------------
-    
-    
     private void declaracionSubprograma ( Atributo declaracionSubprograma ) {
         
         Atributo declaracionFuncion = new Atributo ();
         Atributo declaracionSubrutina = new Atributo ();
         
         if ( "function".equals(preAnalisis) ) {
+            // declaracion_subprograma -> declaracion_funcion 
             declaracionFuncion ( declaracionFuncion );
             
-// ----------------------------------{ 12 }-------------------------------------
-            if ( analizarSemantica ) 
-                declaracionSubprograma.tipo = declaracionFuncion.tipo;
             
         } else if ( "sub".equals(preAnalisis) ) {
+            // declaracion_subprograma -> declaracion_subrutina 
             declaracionSubrutina ( declaracionSubrutina );
             
-// ----------------------------------{ 13 }-------------------------------------
-            if ( analizarSemantica ) 
-                declaracionSubprograma.tipo = declaracionSubrutina.tipo;
             
         } else {
             error ( "[declaracion_subprograma]: Error de función." +
@@ -350,37 +415,11 @@ public class GenCodigoInt {
             argumentos ( argumentos );
             emparejar ( "as" );
             tipo ( tipo );
-            proposicionesOptativas ( proposicionesOpt );
-            
-// ----------------------------------{ 14 }-------------------------------------
-            if ( analizarSemantica ) {
-                //Si no esta en la tabla de simbolos declarada
-                if ( cmp.ts.buscaTipo ( id.entrada ).equals("") ) {
-                    //Y si los argumentos no tienen error
-                    if ( !argumentos.tipo.equals ( ERROR_TIPO ) ) {
-                        cmp.ts.anadeTipo( id.entrada , argumentos.tipo + "->" + tipo.tipo );
-                        //Y si las proposiciones optativas estan bien
-                        if ( proposicionesOpt.tipo.equals( VACIO ) ) 
-                            df.tipo = VACIO;
-                        
-                        else {
-                            df.tipo = ERROR_TIPO;
-                            cmp.me.error( cmp.ERR_SEMANTICO, 
-                              "{14} : proposiciones optativas erroneas" );
-                        }
-                    } else {
-                        df.tipo = ERROR_TIPO;
-                        cmp.me.error( cmp.ERR_SEMANTICO,
-                          "{14} : error en los argumentos de la funcion" );
-                    }
-                } else {
-                    df.tipo = ERROR_TIPO;
-                    cmp.me.error( cmp.ERR_SEMANTICO,
-                     "{14} : La funcion ya ha sido declarada" );
-                }
-            }
+            proposicionesOptativas ( proposicionesOpt );            
+
             emparejar ( "end" );
             emparejar ( "function" );
+            
         } else {
             error ( "[declaracionFuncion]: Error en la declaracion de funcion" +
                     "No.Linea: " + cmp.be.preAnalisis.numLinea );
@@ -405,31 +444,6 @@ public class GenCodigoInt {
             argumentos ( argumentos );
             proposicionesOptativas ( proposicionesOpt );
             
-// ----------------------------------{ 15 }-------------------------------------
-            if ( analizarSemantica ) {
-                //Si aun no esta en la T.S
-                if ( cmp.ts.buscaTipo ( id.entrada ).equals("") ) {
-                    if ( !argumentos.tipo.equals ( ERROR_TIPO ) ) {
-                        cmp.ts.anadeTipo( id.entrada , argumentos.tipo + "->" + "VOID" );
-                        if ( proposicionesOpt.tipo.equals( VACIO ) ) 
-                            ds.tipo = VACIO;
-                        else {
-                            ds.tipo = ERROR_TIPO;
-                            cmp.me.error( cmp.ERR_SEMANTICO, 
-                              "{14} : error en proposiciones optativas" );
-                        }
-                    } else {
-                        ds.tipo = ERROR_TIPO;
-                        cmp.me.error( cmp.ERR_SEMANTICO,
-                          "{14} : argumentos erroneos" );
-                    }
-                } else {
-                    ds.tipo = ERROR_TIPO;
-                    cmp.me.error( cmp.ERR_SEMANTICO,
-                     "{14} : funcion ya declarada" );
-                }
-            }
-            // -----------------------------------------------------------------
             
             emparejar ( "end" );
             emparejar ( "sub" );
@@ -449,18 +463,11 @@ public class GenCodigoInt {
             emparejar ( "(" );
             listaDeclaraciones ( ls );
             emparejar ( ")" );
-            
-// ----------------------------------{ 16 }-------------------------------------
-            if ( analizarSemantica ) 
-                argumentos.tipo = ls.tipo;
-            
-        } else {
-            // empty
-// ----------------------------------{ 17 }-------------------------------------
-            if ( analizarSemantica ) {
-                argumentos.tipo = "VOID";
-            }
+               
+        }else{
+            //argumentos -> empty
         }
+            
     }
 //------------------------------------------------------------------------------
     
@@ -478,27 +485,12 @@ public class GenCodigoInt {
             proposicion ( proposicion );
             proposicionesOptativas ( proposiciones_optativas1 );
             
-            
-// ----------------------------------{ 18 }-------------------------------------
-            if ( analizarSemantica ) {
-                if ( proposicion.tipo.equals( VACIO ) && 
-                     proposiciones_optativas1.tipo.equals( VACIO ) ) {
-                    propOpt.tipo = VACIO;
-                } else {
-                    propOpt.tipo = ERROR_TIPO;
-                    cmp.me.error( cmp.ERR_SEMANTICO,
-                            "{18} : Error en proposiciones" );
-                }
-            }
-            // -----------------------------------------------------------------
+            if ( !propOpt.siguiente.equals("") )
+                emite( "goto " + propOpt.siguiente );
             
         } else {
             // proposiciones_optativas -> empty {19}
             
-// ----------------------------------{19}---------------------------------------
-            if ( analizarSemantica ) {
-                propOpt.tipo = VACIO;
-            }
         }
     }
     
@@ -524,31 +516,19 @@ public class GenCodigoInt {
             emparejar ( "opasig" );
             expresion ( expresion );
             
-// ----------------------------------{ 20 }-------------------------------------
-            if ( analizarSemantica ) {
-                //Primero va y revisa la TS, si no encuentra el id, entonces no
-                //esta declarado aun
-                if(!cmp.ts.buscaTipo(id.entrada).isEmpty()){
-                    
-                    if ( cmp.ts.buscaTipo( id.entrada ).equals ( expresion.tipo ))
-                        proposicion.tipo = VACIO;
-
-                    else if(cmp.ts.buscaTipo(id.entrada).equals("SINGLE") 
-                             && expresion.tipo.equals("INTEGER"))
-                        proposicion.tipo = VACIO;
-                    else {
-                        proposicion.tipo = ERROR_TIPO;
-                        cmp.me.error( cmp.ERR_SEMANTICO,
-                        "{20} : ERROR, El tipo de la variable y expresion no concuerdan " 
-                        + "Linea No." + cmp.be.preAnalisis.numLinea);
-                    }
-                }else{
-                    cmp.me.error( cmp.ERR_SEMANTICO,
-                                "{20} : ERROR, La variable no esta declarada " 
-                                + "Linea No." + cmp.be.preAnalisis.numLinea);
-                }   
+            //============================ ACCIÓN SEMANTICA 2 ==============================
+            String temporal;
+            try {
+                temporal = this.prefixTo3D( infixToPrefix(expresion.valor) ); 
+            } catch ( Exception ex ) {
+                temporal = "";
             }
-            // -----------------------------------------------------------------
+
+            if ( !temporal.equals(""))
+                emite( id.lexema + " := " + temporal );
+            else 
+                emite( id.lexema + " := " + expresion.valor );
+            
             
         } else if ( "call".equals(preAnalisis) ) {
             // proposicion -> call id proposicion_prima {21}
@@ -559,77 +539,55 @@ public class GenCodigoInt {
             proposicionPrima( propPrima );
             
             
-// ----------------------------------{ 21 }-------------------------------------
-            if ( analizarSemantica ) {
-                if ( propPrima.tipo.equals( getDomain (
-                                        cmp.ts.buscaTipo( id.entrada )))) 
-                    proposicion.tipo = VACIO;
-                else {
-                    proposicion.tipo = ERROR_TIPO;
-                    cmp.me.error( cmp.ERR_SEMANTICO,
-                            "{21} : Error en los argumentos" );
-                }
-                    
-            }
-            // -----------------------------------------------------------------
-            
         } else if ( "if".equals(preAnalisis) ) {
             // proposicion -> if condicion then proposiciones_optativas 
             //      else proposiciones_optativas {22} end if
             emparejar ( "if" );
+            
+            proposicion.siguiente = etiqnueva();
+            condicion.verdadera = etiqnueva();
+            condicion.falsa = etiqnueva();
+            proposicionesOptativas_1.siguiente = proposicion.siguiente;
+            
             condicion ( condicion );
             emparejar ( "then" );
             proposicionesOptativas ( proposicionesOptativas_1 );
+            
+            emite( condicion.falsa + ":" );
+            
             emparejar ( "else" );
             proposicionesOptativas ( proposicionesOptativas_2 );
             
+            emite( proposicion.siguiente + ":" );
             
-// ----------------------------------{ 22 }---------------------------------------
-            if ( analizarSemantica ) {
-                if ( condicion.tipo.equals("BOOLEAN")) {
-                    if ( proposicionesOptativas_1.tipo.equals( VACIO ) &&
-                            proposicionesOptativas_2.tipo.equals( VACIO ) ) 
-                        proposicion.tipo = VACIO;
-                    else {
-                        proposicion.tipo = ERROR_TIPO;
-                        cmp.me.error( cmp.ERR_SEMANTICO,
-                                "{22} : Error en las proposiciones" );
-                    }
-                        
-                } else {
-                    proposicion.tipo = ERROR_TIPO;
-                    cmp.me.error( cmp.ERR_SEMANTICO,
-                            "{22} : Expresion no es BOOLEAN" );
-                }
-            }
             emparejar ( "end" );
             emparejar ( "if" );
         } else if ( "do".equals(preAnalisis) ) {
             // proposicion -> do while condicion proposiciones_optativas {23} loop
             emparejar ( "do" );
             emparejar ( "while" );
+            
+            //============================ ACCIÓN SEMANTICA 6 ==============================
+            
+            proposicion.comienzo = etiqnueva();
+            proposicion.siguiente = etiqnueva();
+            condicion_1.verdadera = etiqnueva();
+            condicion_1.falsa = proposicion.siguiente;
+            proposicionesOptativas_3.siguiente = proposicion.comienzo;
+            emite( proposicion.comienzo +  ":" );
+            
+            //===============================================================================
+            
             condicion ( condicion_1 );
             proposicionesOptativas ( proposicionesOptativas_3 );
             
             
-// ----------------------------------{ 23 }---------------------------------------
-            if ( analizarSemantica ) {
-                if ( condicion_1.tipo.equals( "BOOLEAN" )) {
-                    if ( proposicionesOptativas_3.tipo.equals( VACIO ))
-                        proposicion.tipo = VACIO;
-                    else {
-                        proposicion.tipo = ERROR_TIPO;
-                        cmp.me.error( cmp.ERR_SEMANTICO,
-                       "{23} : ERROR, Proposiciones optativas incorrectas " + 
-                                   "No. Linea: " + cmp.be.preAnalisis.numLinea);
-                    }
-                } else {
-                    proposicion.tipo = ERROR_TIPO;
-                    cmp.me.error( cmp.ERR_SEMANTICO,
-                      "{23} : Expresion no booleana" );
-                }
-            }
-            // -----------------------------------------------------------------
+            //============================ ACCIÓN SEMANTICA 7 ==============================
+            
+            emite( "goto " + proposicion.comienzo );
+            emite( condicion_1.falsa + ":" );
+            
+            //===============================================================================
             
             emparejar ( "loop" );
         } else {
@@ -651,15 +609,13 @@ public class GenCodigoInt {
             listaExpresiones ( le );
             emparejar ( ")" );
             
-// ----------------------------------{ 24 }-------------------------------------
-            if ( analizarSemantica ) 
-                propPrim.tipo = le.tipo;
             
-        } else if ( analizarSemantica ) 
-                propPrim.tipo = "VOID";
-            // -> empty {24}
-            
+        } else{
+            // proposicion_prima -> empty 
+        }
     }
+    
+    //------------------------------------------------------------------------------------
     
     private void listaExpresiones ( Atributo le ) {
         
@@ -677,30 +633,8 @@ public class GenCodigoInt {
             listaExpresionesPrima ( lista_expresiones_prima );
             
             
-// ----------------------------------{ 25 }-------------------------------------
-            if ( analizarSemantica ) {
-                if ( !expresion.tipo.equals( ERROR_TIPO ) 
-                        && !lista_expresiones_prima.tipo.equals( 
-                                                            ERROR_TIPO ))
-                    if ( lista_expresiones_prima.tipo.equals( VACIO )){
-                        le.tipo = expresion.tipo;
-                    }else
-                        le.tipo = expresion.tipo + "x" + lista_expresiones_prima.tipo;
-                else {
-                    le.tipo = ERROR_TIPO;
-                    cmp.me.error( cmp.ERR_SEMANTICO,
-                      "{25} : ERROR en lista de expresiones" );
-                }
-            }
-            // -----------------------------------------------------------------
-            
         } else {
             // lista_expresiones -> empty {26}
-            
-// ----------------------------------{ 26 }-------------------------------------
-            if ( analizarSemantica ) {
-                le.tipo = VACIO;
-            }
         }
     }
 //------------------------------------------------------------------------------    
@@ -716,29 +650,9 @@ public class GenCodigoInt {
             expresion ( expresion );
             listaExpresionesPrima ( lista_expresiones_prima1 );
             
-// ----------------------------------{ 27 }-------------------------------------
-            if ( analizarSemantica ) {
-                if ( !expresion.tipo.equals( ERROR_TIPO ) 
-                        && !lista_expresiones_prima1.tipo.equals(
-                                                        ERROR_TIPO ))
-                    if ( lista_expresiones_prima1.tipo.equals( VACIO )) 
-                        listaEP.tipo = expresion.tipo;
-                    else
-                        listaEP.tipo = expresion.tipo + "x" 
-                                        + lista_expresiones_prima1.tipo;
-                else {
-                    listaEP.tipo = ERROR_TIPO;
-                    cmp.me.error( cmp.ERR_SEMANTICO, 
-                      "{27} : ERROR en la Expresión" );
-                }
-            }
         } else {
             // lista_expresiones_prima -> empty {28}
             
-// ----------------------------------{ 28 }-------------------------------------
-            if ( analizarSemantica ) {
-                listaEP.tipo = VACIO;
-            }
         }
     }    
 //------------------------------------------------------------------------------
@@ -748,6 +662,7 @@ public class GenCodigoInt {
         
         Atributo expr1 = new Atributo ();
         Atributo expr2 = new Atributo ();
+        Linea_BE oprel = new Linea_BE ();
         
         if ( preAnalisis.equals ( "id" )        ||
                 preAnalisis.equals ( "num" )       ||
@@ -756,27 +671,23 @@ public class GenCodigoInt {
                             preAnalisis.equals ( "literal" )) {
             // condicion -> expresion oprel expresion {29}
             expresion ( expr1 );
+            oprel = cmp.be.preAnalisis;
             emparejar ( "oprel" );
             expresion ( expr2 );
             
+            //============================ ACCIÓN SEMANTICA 8 ==============================
             
-// ----------------------------------{ 29 }-------------------------------------
-            if ( analizarSemantica ) {
-                if ( expr1.tipo.equals( expr2.tipo ) ) {
-                    condicion.tipo = "BOOLEAN";
-                    
-                }else if(expr1.tipo.equals("INTEGER") 
-                            && expr2.tipo.equals("SINGLE") 
-                                || expr1.tipo.equals("SINGLE") 
-                                    && expr2.tipo.equals("INTEGER")){
-                         condicion.tipo = "BOOLEAN";
-                         
-                } else {
-                    condicion.tipo = "ERROR_TIPO";
-                    cmp.me.error( cmp.ERR_SEMANTICO,
-                      "{29} : Las expresiones no concuerdan" );
-                }
-            }
+            String tempExpr1 = this.prefixTo3D( infixToPrefix(expr1.valor) );
+            String tempExpr2 = this.prefixTo3D( infixToPrefix(expr2.valor) );
+
+            
+            emite ( "if " + ( !tempExpr1.equals ("" ) ? tempExpr1 + " " : expr1.valor ) + oprel.lexema + " " + 
+                  ( !tempExpr2.equals ( "" ) ? tempExpr2 + " " : expr2.valor ) + "goto " + condicion.verdadera  );
+            emite ( "goto " + condicion.falsa );
+            emite ( condicion.verdadera + ":" );
+            
+            //===============================================================================
+
             
         } else {
             error ( "[condicion]: Error de condición." +
@@ -791,6 +702,7 @@ public class GenCodigoInt {
         
         Atributo termino = new Atributo ();
         Atributo exprPrima = new Atributo ();
+        Linea_BE literal = new Linea_BE ();
         
         if ( preAnalisis.equals ( "id" )        ||
                 preAnalisis.equals ( "num" )       ||
@@ -798,37 +710,23 @@ public class GenCodigoInt {
                         preAnalisis.equals ( "(" ) ) {
             // expresion -> termino {30} expresion_prima {31}
             termino ( termino );
-            
-            
-// ----------------------------------{ 30 }-------------------------------------
-            if ( analizarSemantica ) 
-                exprPrima.h = termino.tipo;
-            
             expresionPrima ( exprPrima );
             
-// ----------------------------------{ 31 }-------------------------------------
-            if ( analizarSemantica ) {
-                if ( !exprPrima.h.equals( ERROR_TIPO ) && 
-                        !exprPrima.tipo.equals( ERROR_TIPO ) )
-                    expresion.tipo = exprPrima.tipo;
-                else {
-                    expresion.tipo = ERROR_TIPO;
-                    cmp.me.error( cmp.ERR_SEMANTICO,
-                      "{31} : ERROR de Tipos" );
-                }
-            }
-// -----------------------------------------------------------------------------
+            //============================ ACCIÓN SEMANTICA 9 ==============================
+            expresion.valor = termino.valor + exprPrima.valor ;
+            //===============================================================================
+          
+        } else if ( preAnalisis.equals ( "literal" ) ) {
             
-        } else if ( "literal".equals(preAnalisis) ) {
-            // expresion -> literal {32}
+            // expresion -> literal {10}
+            literal = cmp.be.preAnalisis;
             emparejar ( "literal" );
             
-// ----------------------------------{ 32 }-------------------------------------
-            if ( analizarSemantica ) {
-                expresion.tipo = "STRING";
-            }
-            // -----------------------------------------------------------------
+            //============================ ACCIÓN SEMANTICA 10 ==============================
             
+            expresion.valor = literal.lexema;
+            
+            //===============================================================================    
         } else {  
             error ( "[expresion]: Expresión no valida." +
                     "No.Linea: " + cmp.be.preAnalisis.numLinea );
@@ -847,48 +745,21 @@ public class GenCodigoInt {
             // expresion_prima -> opsuma termino {33} expresion_prima {34}
             emparejar ( "opsuma" );
             termino ( termino );
-            
-            
-// ----------------------------------{ 33 }-------------------------------------
-            if ( analizarSemantica ) {
-                if ( expresion_prima.h.equals( termino.tipo ) )
-                    ePrim_1.h = termino.tipo;
-                else if ( expresion_prima.h.equals( "SINGLE" ) && 
-                            termino.tipo.equals( "INTEGER" ) ||
-                                expresion_prima.h.equals( "INTEGER" )
-                                    && termino.tipo.equals( "SINGLE" ) ) 
-                    ePrim_1.h = "SINGLE";
-                else {
-                    ePrim_1.h = ERROR_TIPO;
-                    cmp.me.error( cmp.ERR_SEMANTICO, 
-                      "{33} : ERROR de Expresion" );
-                }
-            }
-// -----------------------------------------------------------------------------
-            
             expresionPrima ( ePrim_1 ); 
             
-// ----------------------------------{ 34 }-------------------------------------
-            if ( analizarSemantica ) {
-                if ( !ePrim_1.h.equals( ERROR_TIPO ) && 
-                        !ePrim_1.tipo.equals( ERROR_TIPO ) )
-                    expresion_prima.tipo = ePrim_1.tipo;
-                else {
-                    expresion_prima.tipo = ERROR_TIPO;
-                    cmp.me.error( cmp.ERR_SEMANTICO, 
-                      "{34} : ERROR de Expresion_prima" );
-                }
-            }
-// -----------------------------------------------------------------------------
+            //============================ ACCIÓN SEMANTICA 11 ==============================
+            
+            expresion_prima.valor = "+ " + termino.valor + ePrim_1.valor;
+            
+            //===============================================================================
             
         } else {
             // expresion_prima -> empty {35}            
+            //============================ ACCIÓN SEMANTICA 12 ==============================
             
-// ----------------------------------{ 35 }-------------------------------------
-            if ( analizarSemantica ) {
-                expresion_prima.tipo = expresion_prima.h;
-            }
-            // -----------------------------------------------------------------
+            expresion_prima.valor = "";
+            
+            //===============================================================================
         }
     }
     
@@ -905,28 +776,13 @@ public class GenCodigoInt {
                     preAnalisis.equals ( "num.num" )   ||
                         preAnalisis.equals ( "(" ) ) {
             factor ( factor );
-            
-            
-// ----------------------------------{ 36 }-------------------------------------
-            if ( analizarSemantica ) {
-                termino_prima.h = factor.tipo;
-            }
-// -----------------------------------------------------------------
-            
             terminoPrimo ( termino_prima );
             
-// ----------------------------------{ 37 }-------------------------------------
-            if ( analizarSemantica ) {
-                if ( !termino_prima.h.equals( ERROR_TIPO ) &&
-                     !termino_prima.tipo.equals( ERROR_TIPO ) ) 
-                    termino.tipo = termino_prima.tipo;
-                else {
-                    termino.tipo = ERROR_TIPO;
-                    cmp.me.error( cmp.ERR_SEMANTICO, 
-                      "{37} : ERROR de Tipos" );
-                }
-            }
-            // -----------------------------------------------------------------
+            //============================ ACCIÓN SEMANTICA 13 ==============================
+            
+            termino.valor = factor.valor + termino_prima.valor;
+            
+            //===============================================================================
             
         } else {
             error ( "[termino]: Error de término." +
@@ -944,53 +800,16 @@ public class GenCodigoInt {
         if ( "opmult".equals(preAnalisis) ) {
             emparejar ( "opmult" );
             factor ( factor );
-            
-            
-// ----------------------------------{ 38 }---------------------------------------
-            if ( analizarSemantica ) {
-                if ( terminoPrimo.h.equals( factor.tipo ) ) {
-                    tp_1.h = factor.tipo;
-                }
-                else if ( terminoPrimo.h.equals( "SINGLE" ) && 
-                            factor.tipo.equals( "INTEGER" ) ||
-                                terminoPrimo.h.equals( "INTEGER" ) && 
-                                    factor.tipo.equals( "SINGLE" ) ){
-                    tp_1.h = "SINGLE";
-                
-                }else if(terminoPrimo.h.equals(getRange(factor.tipo))) {
-                    tp_1.h = getRange(factor.tipo);
-                }
-                else {
-                    tp_1.h = ERROR_TIPO;
-                    cmp.me.error( cmp.ERR_SEMANTICO, 
-                            "{38} : ERROR. Tipos de datos incorrectos" );
-                }
-            }
-// -----------------------------------------------------------------
-            
             terminoPrimo ( tp_1 );            
-            
-// ----------------------------------{ 39 }-------------------------------------
-            if ( analizarSemantica ) {
-                if ( !tp_1.h.equals( ERROR_TIPO ) && 
-                        !tp_1.tipo.equals( ERROR_TIPO ) )
-                    terminoPrimo.tipo = tp_1.tipo;
-                else {
-                    terminoPrimo.tipo = ERROR_TIPO;
-                    cmp.me.error( cmp.ERR_SEMANTICO,
-                            "{39} : ERROR de Tipos" );
-                }
-            }
-            // -----------------------------------------------------------------
             
         } else {
             // termino -> empty {40}
+            //============================ ACCIÓN SEMANTICA 15 ==============================
             
-// ----------------------------------{ 40 }-------------------------------------
-            if ( analizarSemantica ) {
-                terminoPrimo.tipo = terminoPrimo.h;
-            }
-// -----------------------------------------------------------------
+            tp_1.valor = "";
+            
+            //===============================================================================
+            
         }
     }
 //------------------------------------------------------------------------------
@@ -1001,50 +820,35 @@ public class GenCodigoInt {
         Atributo fp = new Atributo ();
         Atributo expresion = new Atributo ();
         
+        id = cmp.be.preAnalisis;
+        
         if ( "id".equals(preAnalisis) ) {
             // factor -> id factor_prima {41}
             
-            id = cmp.be.preAnalisis;
-            
             emparejar ( "id" );
+            //============================ ACCIÓN SEMANTICA 16 ==============================
+            
+            factor.valor = id.lexema + " ";
+            
+            //===============================================================================
             factorPrimo ( fp );
             
-            
-// ----------------------------------{ 41 }-------------------------------------
-            if ( analizarSemantica ) {
-                if ( fp.tipo.equals( VACIO ) ) {
-                    factor.tipo = cmp.ts.buscaTipo( id.entrada );
-                } else if ( getDomain ( cmp.ts.buscaTipo( id.entrada ))
-                        .equals( getArgumentos(fp.tipo) ) )
-                    factor.tipo = getRange ( cmp.ts.buscaTipo( id.entrada ) );
-                else {
-                    factor.tipo = ERROR_TIPO;
-                    cmp.me.error( cmp.ERR_SEMANTICO, 
-                      "{41} : ERROR de Tipos" );
-                }
-            }
-            // -----------------------------------------------------------------
             
         } else if ( "num".equals(preAnalisis)) {
             // factor -> num {42}
             emparejar ( "num" );
             
-            
-// ----------------------------------{ 42 }-------------------------------------
-            if ( analizarSemantica ) 
-                factor.tipo = "INTEGER";
 // -----------------------------------------------------------------------------
             
         } else if ( "num.num".equals(preAnalisis) ) {
             // factor -> num.num {43}
             emparejar ( "num.num" );
             
+            //============================ ACCIÓN SEMANTICA 18 ==============================
             
-// ----------------------------------{ 43 }-------------------------------------
-            if ( analizarSemantica ) {
-                factor.tipo = "SINGLE";
-            }
-            // -----------------------------------------------------------------
+            factor.valor = id.lexema + " ";
+            
+            //===============================================================================
             
         } else if ( preAnalisis.equals ( "(" ) ) {
             // factor -> ( expresion ) {44}
@@ -1052,12 +856,12 @@ public class GenCodigoInt {
             expresion ( expresion );
             emparejar ( ")" );
             
+            //============================ ACCIÓN SEMANTICA 19 ==============================
             
-// ----------------------------------{ 44 }-------------------------------------
-            if ( analizarSemantica ) {
-                factor.tipo = expresion.tipo;
-            }
-            // -----------------------------------------------------------------
+            factor.valor = "( " + expresion.valor + ") ";
+            
+            //===============================================================================
+
             
         } else {
             error ( "[factor]: Error de variables." +
@@ -1078,25 +882,8 @@ public class GenCodigoInt {
             listaExpresiones ( le );
             emparejar ( ")" );
             
-            
-// ----------------------------------{ 45 }-------------------------------------
-            if ( analizarSemantica ) {
-                //Add validacion de que la lista de expresiones adentro del argumento
-                //de una funcion coincidan con los argumentos declarados
-                factorPrimo.tipo = le.tipo;
-                
-            }
-            
         } else {
             // factor_prima -> empty {46}
-            
-            
-// ----------------------------------{ 46 }-------------------------------------
-            if ( analizarSemantica ) {
-                factorPrimo.tipo = VACIO;
-            }
-// --------------------------------------------------------------------
-            
         }
     }
     

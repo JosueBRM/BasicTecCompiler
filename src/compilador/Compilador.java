@@ -96,6 +96,7 @@ public class Compilador implements ICompilador {
 	public void generarCodigoInt(){
           me.inicializar ();
           be.restablecer ();             // Colocar el preAnalisis al inicio del buffer
+          cua.init       ();
           gci.generar    ();             // Arrancar la generacion de codigo intermedio
 	}
     
