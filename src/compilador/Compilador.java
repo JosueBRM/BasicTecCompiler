@@ -28,10 +28,9 @@
 
 package compilador;
 
+import java.util.ArrayList;
 import general.ICompilador;
 import general.IUListener;
-import general.Linea_BE;
-import general.Linea_TS;
 
 public class Compilador implements ICompilador {
 
@@ -41,10 +40,13 @@ public class Compilador implements ICompilador {
 	BufferEntrada       be     = new BufferEntrada       ( this );
 	TablaSimbolos       ts     = new TablaSimbolos       ( this );
 	ManejErrores        me     = new ManejErrores        ( this );
+        
 	GenCodigoInt        gci    = new GenCodigoInt        ( this );
         GenCodigoObj        gco    = new GenCodigoObj        ( this );
         
 	IUListener iuListener = null;
+        
+        Cuadruplos          cua    = new Cuadruplos          ( this );
 
 	//--------------------------------------------------------------------------
 	// Constructor de Default
@@ -163,6 +165,19 @@ public class Compilador implements ICompilador {
             case Compilador.WARNING_SEMANT : toterr =  me.getTotWarningsSem    ();
         }
         return toterr;
+    }
+    
+    public String[][] getTablaCuadruplos() {
+        ArrayList<Cuadruplo> cuadruplos = cua.getCuadruplos();
+        String [][] arrCuadruplos = new String [ cua.getSize()] [4];
+        
+        for (int i = 0; i < cua.getSize(); i++) {
+            arrCuadruplos [ i ][ 0 ] = cuadruplos.get ( i ).op;
+            arrCuadruplos [ i ][ 1 ] = cuadruplos.get ( i ).arg1;
+            arrCuadruplos [ i ][ 2 ] = cuadruplos.get ( i ).arg2;
+            arrCuadruplos [ i ][ 3 ] = cuadruplos.get ( i ).result;
+        }
+        return arrCuadruplos;
     }
     
     //--------------------------------------------------------------------------
