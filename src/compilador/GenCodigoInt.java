@@ -34,7 +34,17 @@ import general.Linea_BE;
 
 
 public class GenCodigoInt {
+     //--------------------------------------------------------------------------
+    private Compilador cmp;
+    private boolean    analizarSemantica = false;
+    private String     preAnalisis;
+    private static final String VACIO = "VACIO";
+    private static final String ERROR_TIPO = "ERROR_TIPO";
     
+    //Codigo Intermedio Variables ----------------------------------------------
+    public static final int NIL = 0;
+    private int consecutivoTemp;
+    private String prefix1;
     //--------------------------------------------------------------------------
     // Constructor de la clase, recibe la referencia de la clase principal del 
     // compilador.
@@ -48,19 +58,6 @@ public class GenCodigoInt {
 
     }   
         
-    //--------------------------------------------------------------------------
-    private Compilador cmp;
-    private boolean    analizarSemantica = false;
-    private String     preAnalisis;
-    private static final String VACIO = "VACIO";
-    private static final String ERROR_TIPO = "ERROR_TIPO";
-    
-    //Codigo Intermedio Variables ----------------------------------------------
-    public static final int NIL = 0;
-    private int consecutivoTemp;
-    private String prefix1;
-
-    //--------------------------------------------------------------------------
     // Funciones  D -> R
     
     public String getDomain(String t) {
@@ -197,18 +194,9 @@ public class GenCodigoInt {
             declaraciones ( declaraciones_2 );
             
         } 
-        else 
-        {
-            // declaraciones -> empty {3}
-
-            // ----------------------- { 3 } -----------------------
-                        
-            if ( analizarSemantica ) {
-                declaraciones.tipo = VACIO;
-            }
-        }
+        else {}
     }
-//------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
     
     private void listaDeclaraciones ( Atributo lista_dec ) {
         
@@ -234,7 +222,7 @@ public class GenCodigoInt {
         }
     }
     
-//------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
     
     
     private void listaDeclaracionesPrima ( Atributo listaDeclaracionesPrima ) {
@@ -246,7 +234,7 @@ public class GenCodigoInt {
             emparejar ( "," );
             listaDeclaraciones ( listaDeclaraciones );
             
-// -----------------------------------{ 5 }---------------------------------------
+// -----------------------------------{ 5 }-------------------------------------
         } else {
 // -----------------------------------{ 6 }-------------------------------------
             if ( analizarSemantica ) {
@@ -307,7 +295,7 @@ public class GenCodigoInt {
         } else {
             // empty {11}
             
-// ----------------------------------{ 11 }---------------------------------------
+// ----------------------------------{ 11 }-------------------------------------
             if ( analizarSemantica ) {
                 declaracionesSubprogramas.tipo = VACIO;
             }
@@ -315,7 +303,7 @@ public class GenCodigoInt {
         }
     }
     
-    //------------------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     
     
     private void declaracionSubprograma ( Atributo declaracionSubprograma ) {
@@ -326,14 +314,14 @@ public class GenCodigoInt {
         if ( "function".equals(preAnalisis) ) {
             declaracionFuncion ( declaracionFuncion );
             
-// ----------------------------------{ 12 }---------------------------------------
+// ----------------------------------{ 12 }-------------------------------------
             if ( analizarSemantica ) 
                 declaracionSubprograma.tipo = declaracionFuncion.tipo;
             
         } else if ( "sub".equals(preAnalisis) ) {
             declaracionSubrutina ( declaracionSubrutina );
             
-// ----------------------------------{ 13 }---------------------------------------
+// ----------------------------------{ 13 }-------------------------------------
             if ( analizarSemantica ) 
                 declaracionSubprograma.tipo = declaracionSubrutina.tipo;
             
@@ -342,7 +330,7 @@ public class GenCodigoInt {
                     "No.Linea: " + cmp.be.preAnalisis.numLinea );
         }
     }
-//------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
     
    
     private void declaracionFuncion ( Atributo df ) {
@@ -364,7 +352,7 @@ public class GenCodigoInt {
             tipo ( tipo );
             proposicionesOptativas ( proposicionesOpt );
             
-// ----------------------------------{ 14 }---------------------------------------
+// ----------------------------------{ 14 }-------------------------------------
             if ( analizarSemantica ) {
                 //Si no esta en la tabla de simbolos declarada
                 if ( cmp.ts.buscaTipo ( id.entrada ).equals("") ) {
@@ -399,7 +387,7 @@ public class GenCodigoInt {
         }
     }
     
-    //------------------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     
     
     private void declaracionSubrutina ( Atributo ds ) {
@@ -417,7 +405,7 @@ public class GenCodigoInt {
             argumentos ( argumentos );
             proposicionesOptativas ( proposicionesOpt );
             
-// ----------------------------------{ 15 }---------------------------------------
+// ----------------------------------{ 15 }-------------------------------------
             if ( analizarSemantica ) {
                 //Si aun no esta en la T.S
                 if ( cmp.ts.buscaTipo ( id.entrada ).equals("") ) {
