@@ -45,7 +45,7 @@ public class GenCodigoInt {
     
     //Codigo Intermedio Variables ----------------------------------------------
     public static final int NIL = 0;
-    private int consecutivoTemp = 1;
+    private int consecutivoTemp = 0;
     private int consecutivoEtiq = 1;
     //--------------------------------------------------------------------------
     // Constructor de la clase, recibe la referencia de la clase principal del 
@@ -56,7 +56,7 @@ public class GenCodigoInt {
     }
     // Fin del Constructor
     public void generar () {
-        consecutivoTemp = 1;
+        consecutivoTemp = 0;
         preAnalisis = cmp.be.preAnalisis.complex;
         
         programa();
@@ -152,7 +152,7 @@ public class GenCodigoInt {
     
     public String prefixTo3D(String prefix){
         
-        emite(prefix);
+        //emite(prefix);
         String[] c3d = prefix.split("\\s+");
          for(int i=0; c3d[i].equals(("t"+consecutivoTemp)) || i < c3d.length-1  ;i++)
          {
