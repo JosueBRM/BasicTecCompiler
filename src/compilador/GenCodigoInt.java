@@ -21,8 +21,10 @@
  *: Ult.Modif.    : 23/05/23
  *:  Fecha      Modificó            Modificacion
  *:=============================================================================
-    23/05/23    Josue Rangel    Se agregaron los metodos para la generacion de 
-                                codigo intermedio.
+    23/05/23    Josue Rangel        Se agregaron los metodos para la generacion de 
+                                    codigo intermedio.
+
+    23/05/23    Carlos Castorena    Se agregaron los metodos para la generacion de 
 
  *:-----------------------------------------------------------------------------
  */
@@ -485,6 +487,13 @@ public class GenCodigoInt {
             proposicion ( proposicion );
             proposicionesOptativas ( proposiciones_optativas1 );
             
+            //============================ ACCIÓN SEMANTICA 1 ==============================
+            
+            if ( !propOpt.siguiente.equals("") )
+                emite( "goto " + propOpt.siguiente );
+            
+            //===============================================================================
+            
             if ( !propOpt.siguiente.equals("") )
                 emite( "goto " + propOpt.siguiente );
             
@@ -544,21 +553,27 @@ public class GenCodigoInt {
             //      else proposiciones_optativas {22} end if
             emparejar ( "if" );
             
+            // ------------------------------- 3 -------------------------------
             proposicion.siguiente = etiqnueva();
             condicion.verdadera = etiqnueva();
             condicion.falsa = etiqnueva();
             proposicionesOptativas_1.siguiente = proposicion.siguiente;
+            //------------------------------------------------------------------
             
             condicion ( condicion );
             emparejar ( "then" );
             proposicionesOptativas ( proposicionesOptativas_1 );
             
+            //------------------------------- 4 --------------------------------
             emite( condicion.falsa + ":" );
+            //------------------------------------------------------------------
             
             emparejar ( "else" );
             proposicionesOptativas ( proposicionesOptativas_2 );
             
+            //------------------------------- 5 --------------------------------
             emite( proposicion.siguiente + ":" );
+            //------------------------------------------------------------------
             
             emparejar ( "end" );
             emparejar ( "if" );
@@ -567,7 +582,7 @@ public class GenCodigoInt {
             emparejar ( "do" );
             emparejar ( "while" );
             
-            //============================ ACCIÓN SEMANTICA 6 ==============================
+            //============================ ACCIÓN SEMANTICA 6 ==================
             
             proposicion.comienzo = etiqnueva();
             proposicion.siguiente = etiqnueva();
@@ -576,13 +591,13 @@ public class GenCodigoInt {
             proposicionesOptativas_3.siguiente = proposicion.comienzo;
             emite( proposicion.comienzo +  ":" );
             
-            //===============================================================================
+            //==================================================================
             
             condicion ( condicion_1 );
             proposicionesOptativas ( proposicionesOptativas_3 );
             
             
-            //============================ ACCIÓN SEMANTICA 7 ==============================
+            //============================ ACCIÓN SEMANTICA 7 ==================
             
             emite( "goto " + proposicion.comienzo );
             emite( condicion_1.falsa + ":" );
@@ -778,11 +793,11 @@ public class GenCodigoInt {
             factor ( factor );
             terminoPrimo ( termino_prima );
             
-            //============================ ACCIÓN SEMANTICA 13 ==============================
+            //============================ ACCIÓN SEMANTICA 13 =================
             
             termino.valor = factor.valor + termino_prima.valor;
             
-            //===============================================================================
+            //==================================================================
             
         } else {
             error ( "[termino]: Error de término." +
@@ -800,15 +815,21 @@ public class GenCodigoInt {
         if ( "opmult".equals(preAnalisis) ) {
             emparejar ( "opmult" );
             factor ( factor );
-            terminoPrimo ( tp_1 );            
+            terminoPrimo ( tp_1 );       
+            
+            //============================ ACCIÓN SEMANTICA 14 =================
+            
+            terminoPrimo.valor = "* " + factor.valor + terminoPrimo.valor;
+            
+            //=================================================================
             
         } else {
             // termino -> empty {40}
-            //============================ ACCIÓN SEMANTICA 15 ==============================
+            //============================ ACCIÓN SEMANTICA 15 =================
             
             tp_1.valor = "";
             
-            //===============================================================================
+            //==================================================================
             
         }
     }
@@ -838,6 +859,12 @@ public class GenCodigoInt {
             // factor -> num {42}
             emparejar ( "num" );
             
+            
+            //============================ ACCIÓN SEMANTICA 17 ==============================
+            
+            factor.valor = id.lexema + " ";
+            
+            //===============================================================================
 // -----------------------------------------------------------------------------
             
         } else if ( "num.num".equals(preAnalisis) ) {
