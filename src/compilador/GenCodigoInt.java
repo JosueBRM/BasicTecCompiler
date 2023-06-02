@@ -162,6 +162,7 @@ public class GenCodigoInt {
              {
                  //emite(tempnuevo() + " := " + op2 + op1 +  op3);
                  emite(tempnuevo() + " := " + c3d[i+1] + c3d[i] +  c3d[i+2]);
+                 //cmp.cua.add(new Cuadruplo(":=", c3d[i+1], c3d[i+2], ));
                   c3d[i]="t"+(consecutivoTemp-1);            
                  for (int j = i+1; j < c3d.length-2; j++) {
                     
