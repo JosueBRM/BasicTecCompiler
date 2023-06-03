@@ -33,6 +33,7 @@
 package compilador;
 
 import general.Linea_BE;
+import java.util.ArrayList;
 import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -96,51 +97,62 @@ public class GenCodigoInt {
         }
     }
     
-    public static String infixToPrefix(String infix){
-        String inverted = new StringBuilder(infix).reverse().toString();
-        String [] inverted2 = inverted.split("(\\s)");
-        for (String string : inverted2) {
-            System.out.println(string);
+    public static ArrayList <String> infixToPrefix(String infix){
+        String [] tokens = infix.split(" ");
+        Stack <String> pilaCaracteres = new Stack<>();
+        ArrayList <String> prefijo = new ArrayList<>();
+        
+        // invierte la expresion de infijo
+        for (int i = tokens.length - 1; i >= 0; i--) {
+            String token = tokens[i];
+            // Si el token es un operador checamos su precedencia
+            if (isOperator(token.charAt(0))) {
+                while ( !pilaCaracteres.isEmpty() && 
+                        precedencia(pilaCaracteres.peek().charAt(0)) > precedencia (token.charAt(0))) {
+                    prefijo.add( pilaCaracteres.pop() );
+                }
+                pilaCaracteres.push(token);
+            } 
+            // Si el token es un ')' entra a la pila
+            else if (token.equals(")")) {
+                pilaCaracteres.push(token);
+            } 
+            //Si el token es un '(' desapilamos el parentesis de cierre
+            else if (token.equals("(")) {
+                while (!pilaCaracteres.isEmpty() && !pilaCaracteres.peek().equals(")")) {
+                    prefijo.add(pilaCaracteres.pop());
+                }
+                pilaCaracteres.pop();
+            } 
+           // Si el token es una varibale o numero entra a la expresion final
+            else {
+                prefijo.add(token);
+            }
         }
         
-        // Create a stack to store operators
-        Stack<String> operators = new Stack<>();
+        while (!pilaCaracteres.isEmpty()) {
+            prefijo.add(pilaCaracteres.pop());
+        }
+
+        ArrayList <String> prefijoNuevo = new ArrayList();
         
-        // Create a StringBuilder to store the prefix expression
-        StringBuilder prefix = new StringBuilder();
+        for ( int i = prefijo.size()-1; i >= 0; i-- )
+            prefijoNuevo.add( prefijo.get(i) );
+        
+        return prefijoNuevo;
 
-        for(String s : inverted2){
-                
-                if (s.equals(" ")) {
-                    continue; // Ignore spaces
-                }
-                if (isLetterOrDigit(s)) {
-                    prefix.append(s).append(" "); // Append operand and space
-                } else if (")".equals(s)) {
-                    operators.push(s);
-                } else if ("(".equals(s)) {
-                    while (!operators.isEmpty() && 
-                            !operators.peek().equals(")")) {
-                        prefix.append(operators.pop()).append(" "); // Append operator and space
-                    }
-                    operators.pop(); // Pop the closing bracket
-                } else {
-                    while (!operators.isEmpty() 
-                            && precedence(operators.peek()) > 
-                                precedence(s)) {
-                        prefix.append(operators.pop()).append(" "); // Append operator and space
-                    }
-                    operators.push(s);
-                }
+    }
+    
+        public static boolean isOperator(char operador) {
+        switch (operador) {
+            case '+':
+            case '-':
+            case '*':
+            case '/':
+                return true;
+            default:
+                return false;
         }
-
-        while (!operators.isEmpty()) {
-            prefix.append(operators.pop()).append(" "); // Append operator and space
-        }
-
-        // Reverse the prefix expression and return
-        return prefix.reverse().toString().trim();
-
     }
     
     public static boolean isLetterOrDigit(String s){
@@ -150,30 +162,61 @@ public class GenCodigoInt {
         return matcher.find();
     }
     
-    public String prefixTo3D(String prefix){
+     public static int precedencia(char operador) {
+        switch (operador) {
+            case '+':
+            case '-':
+                return 1;
+            case '*':
+            case '/':
+                return 2;
+            default:
+                return 0;
+        }
+    }
+    
+    public String prefixTo3D(ArrayList <String> prefix){
         
-        //emite(prefix);
-        String[] c3d = prefix.split("\\s+");
-         for(int i=0; c3d[i].equals(("t"+consecutivoTemp)) || i < c3d.length-1  ;i++)
-         {
-             if(c3d[i].matches("([\\+\\-\\*\\/])\\w*") && c3d[i+1]
-                            .matches("([A-Za-z1-9])\\w*")&& c3d[i+2]
-                                .matches("([A-Za-z1-9])\\w*") )
-             {
-                 //emite(tempnuevo() + " := " + op2 + op1 +  op3);
-                 emite(tempnuevo() + " := " + c3d[i+1] + c3d[i] +  c3d[i+2]);
-                 //cmp.cua.add(new Cuadruplo(":=", c3d[i+1], c3d[i+2], ));
-                  c3d[i]="t"+(consecutivoTemp-1);            
-                 for (int j = i+1; j < c3d.length-2; j++) {
-                    
-                         c3d[j]=c3d[j+2];              
-                     }
-                  i=0;
-            }
-         }
-         emite(tempnuevo() + " := " + c3d[1] + c3d[0] +  c3d[2]);         
-         return "t" + consecutivoTemp + "";
+        int i = 0;
+        String ultimoTemporal = "";
+        
+        while ( prefix.size() >= 3 ){
+            String c = prefix.get( i );
+            
+            if ( GenCodigoInt.isOperator(c.charAt(0 )) && 
+                Character.isLetterOrDigit( prefix.get( i + 1 ).charAt( 0 ))  &&
+                Character.isLetterOrDigit( prefix.get( i + 2 ).charAt( 0 )) ){
+                String actT = tempnuevo();
+                
+                emite ( actT + ":=" + prefix.get( i + 1 ) + c + prefix.get( i + 2 ) );
+                cmp.cua.add ( new Cuadruplo ( c, prefix.get( i + 1 ), prefix.get( i + 2 ), actT ) );
+                
+                prefix = nuevoArreglo( prefix, i, actT );
+                i=0;
+                ultimoTemporal = actT;
+            } else 
+                // Si no cumple pasa el siguiente caracter
+                i++;
+        }
+        
+        return ultimoTemporal;
      }
+    
+      private ArrayList <String> nuevoArreglo ( ArrayList <String> entrada, int posicion, String temporal ) {
+        ArrayList <String> salida = new ArrayList();
+        
+        for ( int i = 0; i < entrada.size(); i++ ) {
+            if ( i != posicion && i != ( posicion + 1 ) && i != ( posicion + 2 ) ) {
+                salida.add( entrada.get( i ) );
+            } 
+            else if ( i == posicion ) {
+                salida.add( temporal );
+            }
+        }
+        
+        return salida;
+    }
+
         
     // Funciones  D -> R
     

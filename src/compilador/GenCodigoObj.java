@@ -27,11 +27,13 @@
 package compilador;
 
 import general.Linea_TS;
-import general.Linea_BE;
-        
+import java.util.ArrayList;
+
+
 public class GenCodigoObj {
  
     private Compilador cmp;
+    private ArrayList<String> variables = new ArrayList();
 
     
     //--------------------------------------------------------------------------
@@ -57,14 +59,17 @@ public class GenCodigoObj {
     // declaracion de variables.
     
     private void genEncabezadoASM () {
-        cmp.iuListener.mostrarCodObj ( "TITLE CodigoObjeto ( codigoObjeto.asm )"  );
+        cmp.iuListener.mostrarCodObj ( "; TITLE CodigoObjeto ( codigoObjeto.asm )"  );
         cmp.iuListener.mostrarCodObj ( "; Descripción del programa: Automatas II" );
         cmp.iuListener.mostrarCodObj ( "; Fecha de creacion: Ene-Jun/2023"        );
         cmp.iuListener.mostrarCodObj ( "; Revisiones:" );
-        cmp.iuListener.mostrarCodObj ( "; Fecha de ult. modificacion:" );
+        cmp.iuListener.mostrarCodObj ( "; Fecha de ult. modificacion: 02/Jun/2023" );
         cmp.iuListener.mostrarCodObj ( "" );
         cmp.iuListener.mostrarCodObj ( "; INCLUDE Irvine32.inc" );
         cmp.iuListener.mostrarCodObj ( "; (aqui se insertan las definiciones de simbolos)" );
+        cmp.iuListener.mostrarCodObj ( "" );
+        cmp.iuListener.mostrarCodObj ( ".model small" );
+        cmp.iuListener.mostrarCodObj ( ".stack 100h" );
         cmp.iuListener.mostrarCodObj ( "" );
         cmp.iuListener.mostrarCodObj ( ".data" );
         cmp.iuListener.mostrarCodObj ( "  ; (aqui se insertan las variables)" );        
@@ -82,8 +87,10 @@ public class GenCodigoObj {
             String variable = elemento.getLexema();
             
             // Genera una declaracion de variable solo si se trata de un id
-            if ( elemento.getComplex().equals ( "id" ) ) 
+            if ( elemento.getComplex().equals ( "id" ) ) {
                 cmp.iuListener.mostrarCodObj ( "  " + variable + " DWORD 0" );
+                variables.add(variable);
+            }
         }
         cmp.iuListener.mostrarCodObj ( "" );
     }
@@ -94,13 +101,16 @@ public class GenCodigoObj {
         cmp.iuListener.mostrarCodObj ( ".code" );
         cmp.iuListener.mostrarCodObj ( "main PROC" );
         cmp.iuListener.mostrarCodObj ( "  ; (aqui se insertan las instrucciones ejecutables)" );
+        cmp.iuListener.mostrarCodObj ( "    mov ax, @DATA" );
+        cmp.iuListener.mostrarCodObj ( "    mov ds, ax" );
+        cmp.iuListener.mostrarCodObj ( "" );
     }
     
     //--------------------------------------------------------------------------
     // Genera las lineas en Ensamblador de finalizacion del programa
     
     private void genPieASM () {
-        cmp.iuListener.mostrarCodObj ( "  exit" );
+        cmp.iuListener.mostrarCodObj ( ";  exit" );
         cmp.iuListener.mostrarCodObj ( "main ENDP" );
         cmp.iuListener.mostrarCodObj ( "" );
         cmp.iuListener.mostrarCodObj ( "; (aqui se insertan los procedimientos adicionales)" );
@@ -111,12 +121,64 @@ public class GenCodigoObj {
     // Algoritmo de generacion de codigo en ensamblador
     
     private void algoritmoGCO () {
-        for (int i = 0; i < cmp.be.getTamaño(); i++) {
-            Linea_BE be = cmp.be.obtElemento(i);
-            String lexema = be.getLexema();
-            System.out.println(lexema);
-            
+        ArrayList<Cuadruplo> cuadruplos = cmp.cua.getCuadruplos();
+        for(Cuadruplo cuad : cuadruplos){
+            switch(cuad.op){
+                case ":=":
+                    if(variables.contains(cuad.arg1))
+                        cmp.iuListener.mostrarCodObj("̣    mov ax, " + cuad.arg1);
+                    else{
+                        int arg1 = Integer.parseInt(cuad.arg1);
+                        String arg1ToHex = Integer.toHexString(arg1).toUpperCase();
+                        cmp.iuListener.mostrarCodObj("    mov ax, 0" + arg1ToHex + "h");
+                    }
+                    cmp.iuListener.mostrarCodObj ( "    mov " + cuad.result  + ", ax" );
+                    cmp.iuListener.mostrarCodObj ( "" );
+                    break;
+                
+                case "+":
+                    if(variables.contains(cuad.arg1)){
+                        cmp.iuListener.mostrarCodObj( "    mov ax, " + cuad.arg1 );
+                        cmp.iuListener.mostrarCodObj ( "    add ax, " + cuad.arg2 );
+                    }
+                    else{
+                        int arg1 = Integer.parseInt(cuad.arg1);
+                        String arg1ToHex = Integer.toHexString(arg1).toUpperCase();
+                        cmp.iuListener.mostrarCodObj( "    mov ax, 0" + arg1ToHex + "h" );
+                        
+                        int arg2 = Integer.parseInt(cuad.arg2);
+                        String arg2ToHex = Integer.toHexString(arg2).toUpperCase();
+                        cmp.iuListener.mostrarCodObj( "    add ax, 0" + arg2ToHex + "h" );
+                        
+                    }
+                    cmp.iuListener.mostrarCodObj ( "    mov " + cuad.result  + ", ax" );
+                    cmp.iuListener.mostrarCodObj ( "" );
+
+                    break;
+                
+                case "*":
+                    if(variables.contains(cuad.arg1)){
+                        cmp.iuListener.mostrarCodObj( "    mov ax, " + cuad.arg1 );
+                        cmp.iuListener.mostrarCodObj ( "    mul " + cuad.arg2 );
+                    }
+                    else{
+                        int arg1 = Integer.parseInt(cuad.arg1);
+                        String arg1ToHex = Integer.toHexString(arg1).toUpperCase();
+                        cmp.iuListener.mostrarCodObj( "    mov ax, 0" + arg1ToHex + "h" );
+                        
+                        int arg2 = Integer.parseInt(cuad.arg2);
+                        String arg2ToHex = Integer.toHexString(arg2).toUpperCase();
+                        cmp.iuListener.mostrarCodObj( "    mul 0" + arg2ToHex + "h" );
+                        
+                    }
+                    cmp.iuListener.mostrarCodObj ( "    mov " + cuad.result  + ", ax" );
+                    cmp.iuListener.mostrarCodObj ( "" );
+                    
+                    break;
+            }
         }
+        cmp.iuListener.mostrarCodObj ( "    mov ah, 4Ch" );
+        cmp.iuListener.mostrarCodObj ( "    int 21h" );
     }
     
     //--------------------------------------------------------------------------
