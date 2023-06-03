@@ -492,11 +492,13 @@ public class GenCodigoInt {
             
             if ( !propOpt.siguiente.equals("") )
                 emite( "goto " + propOpt.siguiente );
+                cmp.cua.add( new Cuadruplo( 
+                                "goto", 
+                                "",
+                                "",
+                                propOpt.siguiente ) );
             
             //===============================================================================
-            
-            if ( !propOpt.siguiente.equals("") )
-                emite( "goto " + propOpt.siguiente );
             
         } else {
             // proposiciones_optativas -> empty {19}
@@ -534,10 +536,22 @@ public class GenCodigoInt {
                 temporal = "";
             }
 
-            if ( !temporal.equals(""))
+            if ( !temporal.equals("")){
                 emite( id.lexema + " := " + temporal );
-            else 
+                cmp.cua.add( new Cuadruplo( 
+                        ":=",
+                        temporal,
+                        "",
+                        id.lexema ) );
+                
+            } else {
                 emite( id.lexema + " := " + expresion.valor );
+                cmp.cua.add( new Cuadruplo(
+                        ":=",
+                        expresion.valor.replace(" ", ""),
+                        "",
+                        id.lexema ) );
+            }
             
             
         } else if ( "call".equals(preAnalisis) ) {
@@ -567,6 +581,12 @@ public class GenCodigoInt {
             
             //------------------------------- 4 --------------------------------
             emite( condicion.falsa + ":" );
+            cmp.cua.add( new Cuadruplo(
+                                        "",
+                                        "",
+                                        "",
+                                        condicion.comienzo 
+                        ) );
             //------------------------------------------------------------------
             
             emparejar ( "else" );
@@ -574,10 +594,17 @@ public class GenCodigoInt {
             
             //------------------------------- 5 --------------------------------
             emite( proposicion.siguiente + ":" );
+            cmp.cua.add( new Cuadruplo( 
+                                        "",
+                                        "",
+                                        "",
+                                        proposicion.siguiente 
+                        ) );
             //------------------------------------------------------------------
             
             emparejar ( "end" );
             emparejar ( "if" );
+            
         } else if ( "do".equals(preAnalisis) ) {
             // proposicion -> do while condicion proposiciones_optativas {23} loop
             emparejar ( "do" );
@@ -591,6 +618,8 @@ public class GenCodigoInt {
             condicion_1.falsa = proposicion.siguiente;
             proposicionesOptativas_3.siguiente = proposicion.comienzo;
             emite( proposicion.comienzo +  ":" );
+            cmp.cua.add( new Cuadruplo( "", "", "", proposicion.comienzo ) );
+            
             
             //==================================================================
             
@@ -601,7 +630,10 @@ public class GenCodigoInt {
             //============================ ACCIÓN SEMANTICA 7 ==================
             
             emite( "goto " + proposicion.comienzo );
+            cmp.cua.add( new Cuadruplo("goto", "", "", proposicion.comienzo ) );
+            
             emite( condicion_1.falsa + ":" );
+            cmp.cua.add( new Cuadruplo("", "", "", condicion_1.falsa ));
             
             //===============================================================================
             
@@ -699,9 +731,15 @@ public class GenCodigoInt {
             
             emite ( "if " + ( !tempExpr1.equals ("" ) ? tempExpr1 + " " : expr1.valor ) + oprel.lexema + " " + 
                   ( !tempExpr2.equals ( "" ) ? tempExpr2 + " " : expr2.valor ) + "goto " + condicion.verdadera  );
-            emite ( "goto " + condicion.falsa );
-            emite ( condicion.verdadera + ":" );
+            cmp.cua.add(new Cuadruplo(oprel.lexema, (!tempExpr1.equals("") ?
+                    tempExpr1 + " " : expr1.valor), (!tempExpr2.equals("") ?
+                            tempExpr2 + " " : expr2.valor), condicion.verdadera));
             
+            emite ( "goto " + condicion.falsa );
+            cmp.cua.add(new Cuadruplo("goto", "", "", condicion.falsa));
+            
+            emite ( condicion.verdadera + ":" );
+            cmp.cua.add(new Cuadruplo("", "", "", condicion.verdadera));
             //===============================================================================
 
             
