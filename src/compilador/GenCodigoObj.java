@@ -27,8 +27,8 @@
 package compilador;
 
 import general.Linea_TS;
-
-
+import general.Linea_BE;
+        
 public class GenCodigoObj {
  
     private Compilador cmp;
@@ -111,7 +111,12 @@ public class GenCodigoObj {
     // Algoritmo de generacion de codigo en ensamblador
     
     private void algoritmoGCO () {
-        
+        for (int i = 0; i < cmp.be.getTamaño(); i++) {
+            Linea_BE be = cmp.be.obtElemento(i);
+            String lexema = be.getLexema();
+            System.out.println(lexema);
+            
+        }
     }
     
     //--------------------------------------------------------------------------
