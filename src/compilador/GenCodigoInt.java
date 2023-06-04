@@ -191,7 +191,7 @@ public class GenCodigoInt {
                 emite ( actT + ":=" + prefix.get( i + 1 ) + c + prefix.get( i + 2 ) );
                 cmp.cua.add ( new Cuadruplo ( c, prefix.get( i + 1 ), prefix.get( i + 2 ), actT ) );
                 
-                prefix = nuevoArreglo( prefix, i, actT );
+                prefix = newArr( prefix, i, actT );
                 i=0;
                 ultimoTemporal = actT;
             } else 
@@ -202,7 +202,7 @@ public class GenCodigoInt {
         return ultimoTemporal;
      }
     
-      private ArrayList <String> nuevoArreglo ( ArrayList <String> entrada, int posicion, String temporal ) {
+      private ArrayList <String> newArr ( ArrayList <String> entrada, int posicion, String temporal ) {
         ArrayList <String> salida = new ArrayList();
         
         for ( int i = 0; i < entrada.size(); i++ ) {
@@ -535,12 +535,6 @@ public class GenCodigoInt {
             
             if ( !propOpt.siguiente.equals("") )
                 emite( "goto " + propOpt.siguiente );
-                cmp.cua.add( new Cuadruplo( 
-                                "goto", 
-                                "",
-                                "",
-                                propOpt.siguiente ) );
-            
             //===============================================================================
             
         } else {
@@ -673,7 +667,6 @@ public class GenCodigoInt {
             //============================ ACCIÓN SEMANTICA 7 ==================
             
             emite( "goto " + proposicion.comienzo );
-            cmp.cua.add( new Cuadruplo("goto", "", "", proposicion.comienzo ) );
             
             emite( condicion_1.falsa + ":" );
             cmp.cua.add( new Cuadruplo("", "", "", condicion_1.falsa ));
@@ -779,7 +772,7 @@ public class GenCodigoInt {
                             tempExpr2 + " " : expr2.valor), condicion.verdadera));
             
             emite ( "goto " + condicion.falsa );
-            cmp.cua.add(new Cuadruplo("goto", "", "", condicion.falsa));
+             
             
             emite ( condicion.verdadera + ":" );
             cmp.cua.add(new Cuadruplo("", "", "", condicion.verdadera));
